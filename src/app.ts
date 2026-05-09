@@ -24,7 +24,7 @@ export const app = Fastify({
 });
 
 export const logger = app.log;
-
+const y=10;
 app.post<{Body:WebhookBody}>('/webhook', async (request, reply) => {
   // request.body is already parsed by Fastify
   const body = request.body as WebhookBody;
