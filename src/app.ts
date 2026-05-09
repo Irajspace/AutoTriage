@@ -49,7 +49,7 @@ app.post<{Body:WebhookBody}>('/webhook', { config: { rawBody: true } }, async (r
   // }
 
   const { issue, action, repository } = request.body;
-
+  const x=10;
   const job = await issueQueue.add(
       'process-issue',
       {
