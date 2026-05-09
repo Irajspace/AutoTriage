@@ -34,18 +34,27 @@ app.get('/health', async (request) => {
 
 app.post<{Body:WebhookBody}>('/webhook', { config: { rawBody: true } }, async (request, reply) => {
   const signature = request.headers['x-hub-signature-256'] as string;
-  const payload = request.rawBody as string; 
+  const payload = request.rawBody as string;
   
-  request.log.info({  // ← Use request.log instead
+  // Parse the body manually since rawBody disables auto-parsing
+  let body: WebhookBody;
+  try {
+    body = JSON.parse(payload);
+  } catch (err) {
+    return reply.code(400).send({ error: 'Invalid JSON' });
+  }
+
+  request.log.info({
     signature,
     payload
   });
 
-  // if(!verifyGitHubSignature(payload,signature,GITHUB_WEBHOOK_SECRET)){
-  //   return reply.code(401).send({ error: 'Unauthorized' });
-  // }
+  // Use body instead of request.body
+  const { issue, action, repository } = body;
 
-  const { issue, action, repository } = request.body;
+  if (!issue || !repository) {
+    return reply.code(400).send({ error: 'Missing issue or repository' });
+  }
 
   const job = await issueQueue.add(
     'process-issue',
