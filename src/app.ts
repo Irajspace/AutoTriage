@@ -36,20 +36,20 @@ app.post<{Body:WebhookBody}>('/webhook', { config: { rawBody: true } }, async (r
   const signature = request.headers['x-hub-signature-256'] as string;
   const payload = request.rawBody as string;
   
-  // Parse the body manually since rawBody disables auto-parsing
+  // DEBUG: Log what we're receiving
+  console.log('Raw payload type:', typeof payload);
+  console.log('Raw payload length:', payload?.length);
+  console.log('Raw payload first 200 chars:', payload?.substring(0, 200));
+
+  // Parse the body
   let body: WebhookBody;
   try {
     body = JSON.parse(payload);
   } catch (err) {
-    return reply.code(400).send({ error: 'Invalid JSON' });
+    console.error('JSON parse error:', err);
+    return reply.code(400).send({ error: 'Invalid JSON', received: payload?.substring(0, 100) });
   }
 
-  request.log.info({
-    signature,
-    payload
-  });
-
-  // Use body instead of request.body
   const { issue, action, repository } = body;
 
   if (!issue || !repository) {
