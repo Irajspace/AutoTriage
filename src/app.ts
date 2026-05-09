@@ -28,6 +28,7 @@ export const logger = app.log;
 app.post<{Body:WebhookBody}>('/webhook', async (request, reply) => {
   // request.body is already parsed by Fastify
   const body = request.body as WebhookBody;
+  console.log('Full webhook payload:', JSON.stringify(body, null, 2));
 
   console.log('Received webhook:', {
     issueNumber: body.issue?.number,
