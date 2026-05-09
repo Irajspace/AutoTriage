@@ -24,6 +24,7 @@ export const app = Fastify({
   logger: true
 });
 
+export const logger = app.log;  // ← MOVE HERE (before using it)
 
 app.register(rawBody, { runFirst: true }); 
 
@@ -31,42 +32,38 @@ app.get('/health', async (request) => {
   return { status: 'ok' };
 });
 
-
 app.post<{Body:WebhookBody}>('/webhook', { config: { rawBody: true } }, async (request, reply) => {
-
   const signature = request.headers['x-hub-signature-256'] as string;
-  
-
   const payload = request.rawBody as string; 
   
-  logger.info({
+  request.log.info({  // ← Use request.log instead
     signature,
     payload
-  })
+  });
 
   // if(!verifyGitHubSignature(payload,signature,GITHUB_WEBHOOK_SECRET)){
   //   return reply.code(401).send({ error: 'Unauthorized' });
   // }
 
   const { issue, action, repository } = request.body;
-  const x=11;
+
   const job = await issueQueue.add(
-      'process-issue',
-      {
-        issueNumber: issue.number,
-        issueTitle: issue.title,
-        issueBody: issue.body,
-        repoName: repository.name,
-        repoFullName: repository.full_name,
+    'process-issue',
+    {
+      issueNumber: issue.number,
+      issueTitle: issue.title,
+      issueBody: issue.body,
+      repoName: repository.name,
+      repoFullName: repository.full_name,
+    },
+    {
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 2000,
       },
-      {
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 2000,
-        },
-      }
-    );
+    }
+  );
     
   request.log.info(
     {
@@ -80,5 +77,3 @@ app.post<{Body:WebhookBody}>('/webhook', { config: { rawBody: true } }, async (r
 
   return reply.code(202).send({ received: true });
 });
-
-export const logger = app.log;
