@@ -1,0 +1,29 @@
+{
+	"devDependencies": {
+		"@types/node": "^25.6.0",
+		"@types/pg": "^8.20.0",
+		"nodemon": "^3.1.14",
+		"ts-node": "^10.9.2",
+		"tsx": "^4.21.0",
+		"typescript": "^6.0.3"
+	},
+	"dependencies": {
+		"@google/genai": "^2.0.1",
+		"@google/generative-ai": "^0.24.1",
+		"@octokit/rest": "^22.0.1",
+		"bullmq": "^5.76.4",
+		"dotenv": "^17.4.2",
+		"fastify": "^5.8.5",
+		"fastify-raw-body": "^5.0.0",
+		"glob": "^13.0.6",
+		"ioredis": "^5.10.1",
+		"openai": "^6.37.0",
+		"pg": "^8.20.0"
+	},
+	"type": "module",
+	"scripts": {
+		"dev": "tsx watch src/server.ts",
+		"build": "tsc",
+		"start": "node dist/server.js"
+	}
+}
