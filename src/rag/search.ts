@@ -12,10 +12,14 @@ export async function searchSimilarCode(
   issueText: string,
   repoName: string
 ): Promise<CodeChunk[]> {
-  // Generate embedding for the issue text
+  // Generate embedding for issue
   const embedding = await embedText(issueText);
 
-  // Query similar code chunks
+  console.log('Embedding dimension:', embedding.length);
+
+  // Convert embedding to pgvector format
+  const vector = `[${embedding.join(',')}]`;
+
   const result = await pool.query(
     `
     SELECT 
@@ -28,10 +32,17 @@ export async function searchSimilarCode(
     ORDER BY embedding <-> $1::vector
     LIMIT 5
     `,
-    [JSON.stringify(embedding), repoName]
+    [vector, repoName]
   );
 
-  // Map database rows to CodeChunk objects
+  console.log(
+    'Raw search results:',
+    result.rows.map((r) => ({
+      file: r.file_path,
+      similarity: r.similarity,
+    }))
+  );
+
   return result.rows.map((row) => ({
     filePath: row.file_path,
     chunkNumber: row.chunk_number,
