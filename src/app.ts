@@ -1,17 +1,11 @@
-import 'dotenv/config'; 
-import Fastify from 'fastify';
-import { verifyGitHubSignature } from './utils/verify.js';
-import { issueQueue } from './queue.js';
-import { worker } from './worker.js'; 
-
 type WebhookBody = {
   action: string;
-  issue: {
+  issue?: { // 'issue' can be optional or partially defined in some webhook events
     number: number;
     title: string;
-    body: string;
+    body?: string | null; // 'body' can be undefined, null, or an empty string
   };
-  repository: {
+  repository?: { // 'repository' can be optional or partially defined
     name: string;
     full_name: string;
   };
@@ -23,26 +17,27 @@ export const app = Fastify({
   logger: true
 });
 
-export const logger = app.log;
-const y=10;
-app.post<{Body:WebhookBody}>('/webhook', async (request, reply) => {
-  // request.body is already parsed by Fastify
-  const body = request.body as WebhookBody;
-   console.log('Full webhook payload:', JSON.stringify(body, null, 2));
+// ... inside a Fastify route handler ...
+// (Assuming 'request' and 'reply' are available)
 
-  if (!body.issue || !body.repository) {
-    return reply.code(400).send({ error: 'Missing issue or repository' });
+  const { issue, action, repository } = request.body as WebhookBody;
+
+  // Add robust validation for required fields to prevent crashes
+  if (!issue || !repository || typeof issue.number !== 'number' || typeof issue.title !== 'string') {
+    request.log.warn({ payload: request.body }, 'Invalid or incomplete webhook payload: Missing required issue or repository details.');
+    reply.status(400).send({ error: 'Bad Request: Missing essential issue or repository information.' });
+    return; // Stop processing if payload is invalid
   }
 
-  const { issue, action, repository } = body;
+  // Safely retrieve issue body, defaulting to an empty string if it's undefined or null
+  const issueBody = issue.body ?? ''; // Use nullish coalescing operator for robustness
 
-  try {
-    const job = await issueQueue.add(
+  const job = await issueQueue.add(
       'process-issue',
       {
         issueNumber: issue.number,
         issueTitle: issue.title,
-        issueBody: issue.body,
+        issueBody: issueBody, // Use the validated and defaulted issueBody
         repoName: repository.name,
         repoFullName: repository.full_name,
       },
@@ -54,24 +49,3 @@ app.post<{Body:WebhookBody}>('/webhook', async (request, reply) => {
         },
       }
     );
-      
-    request.log.info(
-      {
-        issueNumber: issue.number,
-        title: issue.title,
-        action: action,
-        repo: repository.name
-      },
-      'GitHub webhook received'
-    );
-
-    return reply.code(202).send({ received: true });
-  } catch (err) {
-    request.log.error(err, 'Failed to queue issue');
-    return reply.code(500).send({ error: 'Failed to queue' });
-  }
-});
-
-app.get('/health', async (request) => {
-  return { status: 'ok' };
-});
