@@ -21,19 +21,19 @@ export async function searchSimilarCode(
   const vector = `[${embedding.join(',')}]`;
 
   const result = await pool.query(
-    `
-    SELECT 
-      file_path,
-      chunk_number,
-      chunk_text,
-      1 - (embedding <-> $1::vector) AS similarity
-    FROM code_embeddings
-    WHERE repo_name = $2
-    ORDER BY embedding <-> $1::vector
-    LIMIT 5
-    `,
-    [vector, repoName]
-  );
+  `
+  SELECT 
+    file_path,
+    chunk_number,
+    chunk_text,
+    1 - (embedding <-> $1::vector) AS similarity
+  FROM code_embeddings
+  WHERE LOWER(repo_name) = LOWER($2)
+  ORDER BY embedding <-> $1::vector
+  LIMIT 5
+  `,
+  [vector, repoName]
+);
 
   console.log(
     'Raw search results:',
